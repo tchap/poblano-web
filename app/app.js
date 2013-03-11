@@ -58,7 +58,7 @@ app.configure('development', function () {
 });
 
 app.get('/',      ensureAuthenticated, require('./routes/index').index);
-app.get('/login', require('./routes/login').login);
+app.get('/login',                      require('./routes/index').index);
 
 app.get('/auth/google-openid', passport.authenticate('google'));
 app.get('/auth/google-openid/return',

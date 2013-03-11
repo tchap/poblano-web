@@ -1,11 +1,12 @@
 /**
- * Get home page (authenticated).
+ * Get home page.
  */
 
 exports.index = function (req, res) {
   var context = {
     title: 'Welcome to Poblano!',
-    username: req.user.displayName,
   };
+  if (req.user)
+    context.username = req.user.displayName;
   res.render('index', context);
 };
