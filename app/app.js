@@ -5,33 +5,35 @@ var express = require('express')
   , GoogleStrategy = require('passport-google').Strategy;
 
 var SimpleUser = require('./lib/SimpleUser'),
-	User = new SimpleUser();
+    User = new SimpleUser();
+
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated())
+    return next();
+  else
+    res.redirect('/login');
+}
 
 passport.serializeUser(function(user, done) {
-  console.log('SERIALIZE');
   done(null, user.id);
 });
 
 passport.deserializeUser(function(id, done) {
-  console.log('DESERIALIZE');
   User.findById(id, function(err, user) {
     done(err, user);
   });
 });
 
 passport.use(new GoogleStrategy({
-	returnURL: 'http://localhost:3000/auth/google-openid/return',
-    realm: 'http://localhost:3000'
+    returnURL: 'http://localhost:3000/auth/google-openid/return',
+    realm:     'http://localhost:3000'
   },
   function(identifier, profile, done) {
-    console.log('OPENID');
     User.create({ openId: identifier, profile: profile }, function(err, user) {
       done(err, user);
     });
   }
 ));
-
-var routes = require('./routes');
 
 var app = express();
 
@@ -55,12 +57,13 @@ app.configure('development', function () {
   app.use(express.errorHandler());
 });
 
-app.get('/', routes.index);
+app.get('/',      ensureAuthenticated, require('./routes/index').index);
+app.get('/login', require('./routes/login').login);
 
 app.get('/auth/google-openid', passport.authenticate('google'));
 app.get('/auth/google-openid/return',
   passport.authenticate('google', { successRedirect: '/',
-                                    failureRedirect: '/'}));
+                                    failureRedirect: '/login'}));
 
 http.createServer(app).listen(app.get('port'), function () {
   console.log("Express server listening on port " + app.get('port'));
