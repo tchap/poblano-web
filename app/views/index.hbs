@@ -12,12 +12,11 @@
 		<div class="container">
 		  <a class="brand" href="#">Poblano</a>
 		  <div class="pull-right">
-			<div class="btn-group">
-			  <a class="btn btn-link dropdown-toggle" data-toggle="dropdown" href="#">Sign in <b class="caret"></b></a>
-		      <ul class="dropdown-menu">
-				<li><a href="#">Google OpenID</a></li>
-			  </ul>
-		    </div>
+		  {{#if displayName}}
+		  {{displayName}}
+		  {{else}}
+		  <a class="btn btn-link" href="/auth/google-openid">Sign In with Google OpenID</a>
+		  {{/if}}
           </div>
 		</div>
 	  </div>

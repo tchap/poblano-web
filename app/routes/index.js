@@ -3,5 +3,11 @@
  */
 
 exports.index = function (req, res) {
-  res.render('index', { title: 'Welcome in Poblano!'});
+  var context = {
+	title: 'Welcome to Poblano!',
+  };
+  if (req.user) {
+    context.displayName = req.user.displayName;
+  }
+  res.render('index', context);
 };
