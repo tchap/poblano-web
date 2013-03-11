@@ -1,7 +1,7 @@
-var express = require('express')
-  , http    = require('http')
-  , path    = require('path')
-  , passport = require('passport')
+var express        = require('express')
+  , http           = require('http')
+  , path           = require('path')
+  , passport       = require('passport')
   , GoogleStrategy = require('passport-google').Strategy;
 
 var SimpleUser = require('./lib/SimpleUser'),
@@ -29,7 +29,7 @@ passport.use(new GoogleStrategy({
     realm:     'http://localhost:3000'
   },
   function(identifier, profile, done) {
-    User.create({ openId: identifier, profile: profile }, function(err, user) {
+    User.findOrCreate({ id: identifier, profile: profile }, function(err, user) {
       done(err, user);
     });
   }
