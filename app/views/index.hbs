@@ -11,6 +11,12 @@
       <div class="navbar-inner">
 		<div class="container">
 		  <a class="brand" href="#">Poblano</a>
+		  {{#if username}}
+                  <ul class="nav">
+                    <li class="active"><a href="#">Initialize Project</a></li>
+		    <li><a href="#">Finalize Project</a></li>
+		  </ul>
+		  {{/if}}
 		  <div class="pull-right">
 		  {{#if username}}
 		  <p class="btn btn-link" href="/profile">{{username}}</p>
