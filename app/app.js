@@ -1,46 +1,19 @@
-var express        = require('express')
-  , http           = require('http')
-  , path           = require('path')
-  , passport       = require('passport')
-  , GoogleStrategy = require('passport-google').Strategy;
-
-var SimpleUser = require('./lib/SimpleUser'),
-    User = new SimpleUser();
-
-function ensureAuthenticated(req, res, next) {
-  if (req.isAuthenticated())
-    return next();
-  else
-    res.redirect('/login');
-}
-
-passport.serializeUser(function(user, done) {
-  done(null, user.id);
-});
-
-passport.deserializeUser(function(id, done) {
-  User.findById(id, function(err, user) {
-    done(err, user);
-  });
-});
-
-passport.use(new GoogleStrategy({
-    returnURL: 'http://localhost:3000/auth/google-openid/return',
-    realm:     'http://localhost:3000'
-  },
-  function(identifier, profile, done) {
-    User.findOrCreate({ id: identifier, profile: profile }, function(err, user) {
-      done(err, user);
-    });
-  }
-));
+var express  = require('express')
+  , http     = require('http')
+  , path     = require('path')
+  , passport = require('passport');
 
 var app = express();
 
 app.configure(function () {
-  app.set('port', process.env.PORT || 3000);
+  app.set('host', process.env.POBLANO_HOST || 'http://localhost');
+  app.set('port', process.env.POBLANO_PORT || 3000);
   app.set('views', __dirname + '/views');
-  app.set('view engine', 'hbs');
+  app.set('view engine', 'jade');
+  app.set('prefix', process.env.POBLANO_PREFIX || '')
+  if (process.env.POBLANO_ENABLE_PROXY) {
+    app.enable('trust proxy');
+  }
   app.use(express.favicon());
   app.use(express.logger('dev'));
   app.use(express.cookieParser());
@@ -53,18 +26,96 @@ app.configure(function () {
   app.use(express.static(path.join(__dirname, 'public')));
 });
 
+/**
+ * Passport Setup - GitHub Strategy
+ */
+var GITHUB_CLIENT_ID      = process.env.POBLANO_GITHUB_CLIENT_ID
+  , GITHUB_CLIENT_SECRET  = process.env.POBLANO_GITHUB_CLIENT_SECRET
+  , GITHUB_OAUTH_CALLBACK = process.env.POBLANO_GITHUB_OAUTH_CALLBACK;
+
+if (!GITHUB_CLIENT_ID) {
+  throw new Error("POBLANO_GITHUB_CLIENT_ID not set")
+}
+if (!GITHUB_CLIENT_SECRET) {
+  throw new Error("POBLANO_GITHUB_CLIENT_SECRET not set")
+}
+if (!GITHUB_OAUTH_CALLBACK) {
+  throw new Error("POBLANO_GITHUB_OAUTH_CALLBACK not set")
+}
+
+var GitHubStrategy = require('passport-github').Strategy
+  , SimpleUser = require('./lib/SimpleUser')
+  , User = new SimpleUser();
+
+passport.serializeUser(function(user, done) {
+  done(null, user.id);
+});
+
+passport.deserializeUser(function(id, done) {
+  User.findById(id, function(err, user) {
+    done(err, user);
+  });
+});
+
+passport.use(new GitHubStrategy({
+    clientID:     GITHUB_CLIENT_ID,
+    clientSecret: GITHUB_CLIENT_SECRET,
+    callbackURL:  GITHUB_OAUTH_CALLBACK
+  },
+  function(accessToken, refreshToken, profile, done) {
+    User.findOrCreate({ id: profile.id, profile: profile }, function(err, user) {
+      done(err, user);
+    });
+  }
+));
+
 app.configure('development', function () {
   app.use(express.errorHandler());
 });
 
-app.get('/',      ensureAuthenticated, require('./routes/index').index);
-app.get('/login',                      require('./routes/index').index);
+/**
+ * Paths
+ */
+var site = require('./routes/site')
+  , user = require('./routes/user')
+  , project = require('./routes/project')
 
-app.get('/auth/google-openid', passport.authenticate('google'));
-app.get('/auth/google-openid/return',
-  passport.authenticate('google', { successRedirect: '/',
+// General 
+app.get('/login', site.login);
+app.get('/', ensureAuthenticated, site.index);
+app.get('/admin', ensureAuthenticated, restrictTo('admin'), site.admin);
+
+// User
+app.get('/user/:id', ensureAuthenticated, restrictTo('self'), user.profile);
+
+// Project
+app.get('/project/initialise', ensureAuthenticated, project.initialise);
+
+// Authentication
+app.get('/auth/github', passport.authenticate('github'));
+app.get('/auth/github/callback',
+  passport.authenticate('github', { successRedirect: '/',
                                     failureRedirect: '/login'}));
 
+/**
+ * Listen and Serve
+ */
 http.createServer(app).listen(app.get('port'), function () {
   console.log("Express server listening on port " + app.get('port'));
 });
+
+/**
+ * Middleware
+ */
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated())
+    return next();
+  else
+    res.redirect('/login');
+}
+
+function restrictTo(role) {
+  return function(req, res, next) {
+    next();
+  }
+}

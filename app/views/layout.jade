@@ -1,0 +1,17 @@
+!!!5
+html
+  head
+    title Poblano - #{title}
+    meta(name='viewport', content='width=device-width, initial-scale=1.0')
+    link(href='#{prefix}/css/bootstrap.min.css', rel='stylesheet', media='screen')
+    link(href='#{prefix}/css/custom.css', rel='stylesheet')
+  body
+    div.navbar.navbar-fixed-top
+      div.navbar-inner
+        div.container
+         a(href='#{prefix}/', class='brand') Poblano
+         block menu
+    div#content.container
+      block content
+    script(src='#{prefix}/js/jquery-2.0.0.min.js')
+    script(src='#{prefix}/js/bootstrap.min.js')
