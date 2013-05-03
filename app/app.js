@@ -1,17 +1,18 @@
 var express  = require('express')
   , http     = require('http')
   , path     = require('path')
-  , passport = require('passport');
+  , passport = require('passport')
+  , config   = require('./config')
 
 var app = express();
 
 app.configure(function () {
-  app.set('host', process.env.POBLANO_HOST || 'http://localhost');
-  app.set('port', process.env.POBLANO_PORT || 3000);
+  app.set('host', config.HTTP_HOST);
+  app.set('port', config.HTTP_PORT);
   app.set('views', __dirname + '/views');
   app.set('view engine', 'jade');
-  app.set('prefix', process.env.POBLANO_PREFIX || '')
-  if (process.env.POBLANO_ENABLE_PROXY) {
+  app.set('prefix', config.HTTP_PATH_PREFIX)
+  if (config.HTTP_PROXY_ENABLED) {
     app.enable('trust proxy');
   }
   app.use(express.favicon());
@@ -19,7 +20,7 @@ app.configure(function () {
   app.use(express.cookieParser());
   app.use(express.bodyParser());
   app.use(express.methodOverride());
-  app.use(express.session({ secret: 'keyboard cat' }));
+  app.use(express.session({ secret: config.SESSION_SECRET }));
   app.use(passport.initialize());
   app.use(passport.session());
   app.use(app.router);
@@ -29,23 +30,8 @@ app.configure(function () {
 /**
  * Passport Setup - GitHub Strategy
  */
-var GITHUB_CLIENT_ID      = process.env.POBLANO_GITHUB_CLIENT_ID
-  , GITHUB_CLIENT_SECRET  = process.env.POBLANO_GITHUB_CLIENT_SECRET
-  , GITHUB_OAUTH_CALLBACK = process.env.POBLANO_GITHUB_OAUTH_CALLBACK;
-
-if (!GITHUB_CLIENT_ID) {
-  throw new Error("POBLANO_GITHUB_CLIENT_ID not set")
-}
-if (!GITHUB_CLIENT_SECRET) {
-  throw new Error("POBLANO_GITHUB_CLIENT_SECRET not set")
-}
-if (!GITHUB_OAUTH_CALLBACK) {
-  throw new Error("POBLANO_GITHUB_OAUTH_CALLBACK not set")
-}
-
 var GitHubStrategy = require('passport-github').Strategy
-  , SimpleUser = require('./lib/SimpleUser')
-  , User = new SimpleUser();
+  , User = new config.strategy['User'](config);
 
 passport.serializeUser(function(user, done) {
   done(null, user.id);
@@ -58,9 +44,14 @@ passport.deserializeUser(function(id, done) {
 });
 
 passport.use(new GitHubStrategy({
-    clientID:     GITHUB_CLIENT_ID,
-    clientSecret: GITHUB_CLIENT_SECRET,
-    callbackURL:  GITHUB_OAUTH_CALLBACK
+    clientID:      config.GITHUB_CLIENT_ID,
+    clientSecret:  config.GITHUB_CLIENT_SECRET,
+    callbackURL:   config.HTTP_FORWARDED_HOST
+		 + config.HTTP_PATH_PREFIX
+		 + '/auth/github/callback',
+    customHeaders: {
+      'User-Agent': 'Salsita Poblano'
+    }
   },
   function(accessToken, refreshToken, profile, done) {
     User.findOrCreate({ id: profile.id, profile: profile }, function(err, user) {

@@ -2,7 +2,7 @@
  * A very simple in-memory User implementation.
  */
 
-User = function () {
+var User = function () {
   this._users = {};
 }
 
