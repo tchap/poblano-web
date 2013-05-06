@@ -4,7 +4,7 @@ if [ -r "$POBLANO_ENVIRON" ]; then
 	. "$POBLANO_ENVIRON"
 fi
 
-home="${POBLANO_SUPERVISOR_HOME:-$PWD}"
+home="${POBLANO_HOME:-$PWD}"
 
 case "$1" in
 	start)

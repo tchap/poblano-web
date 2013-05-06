@@ -3,16 +3,16 @@
 #------------------------------------------------------------------------------
 
 POBLANO_REPO='-abs-path-'
+POBLANO_HOME="-abs-path-"
 
 #------------------------------------------------------------------------------
 # Supervisord
 #------------------------------------------------------------------------------
 
 POBLANO_SUPERVISOR_CONFIG="$POBLANO_REPO/etc/supervisord.conf"
-POBLANO_SUPERVISOR_HOME="-abs-path-"
 
 #------------------------------------------------------------------------------
-# Poblano
+# Poblano Frontend
 #------------------------------------------------------------------------------
 
 export POBLANO_HTTP_PORT='8080'
@@ -24,3 +24,13 @@ export POBLANO_SESSION_SECRET='-random-string-'
 
 export POBLANO_GITHUB_CLIENT_ID='-github-client-id-'
 export POBLANO_GITHUB_CLIENT_SECRET='-github-client-secret-'
+
+#------------------------------------------------------------------------------
+# Poblano Backend
+#------------------------------------------------------------------------------
+
+export POBLANO_MONGODB_HOST='127.0.0.1'
+export POBLANO_MONGODB_PORT='27017'
+
+export POBLANO_MONGODB_DBPATH="$POBLANO_HOME/mongodb"
+export POBLANO_MONGODB_LOGPATH="$POBLANO_HOME/mongodb.log"
