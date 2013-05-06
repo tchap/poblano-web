@@ -1,0 +1,30 @@
+#!/bin/bash
+
+if [ -r "$POBLANO_ENVIRON" ]; then
+	. "$POBLANO_ENVIRON"
+fi
+
+home="${POBLANO_SUPERVISOR_HOME:-$PWD}"
+
+case "$1" in
+	start)
+		cd "$home"
+		supervisord -c "$POBLANO_SUPERVISOR_CONFIG" -d "$home"
+		;;
+	stop)
+		cd "$home"
+		supervisorctl -c "$POBLANO_SUPERVISOR_CONFIG" shutdown
+		;;
+	restart)
+		cd "$home"
+		supervisorctl -c "$POBLANO_SUPERVISOR_CONFIG" restart all
+		;;
+	status)
+		cd "$home"
+		supervisorctl -c "$POBLANO_SUPERVISOR_CONFIG" status
+		;;
+	*)
+		echo "Usage: poblanoctl {start|stop|restart|status}"
+		exit 1
+		;;
+esac

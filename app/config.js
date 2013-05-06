@@ -10,7 +10,7 @@ var config = {};
 update(config, 'HTTP_HOST', 'http://localhost');
 update(config, 'HTTP_PORT', 3000);
 update(config, 'HTTP_PATH_PREFIX', '');
-update(config, 'HTTP_FORWARDED_HOST', '');
+update(config, 'HTTP_FORWARDED_HOST', config.HTTP_HOST);
 update(config, 'HTTP_PROXY_ENABLED', false);
 
 // Sessions
@@ -19,7 +19,6 @@ required(update(config, 'SESSION_SECRET'));
 // GitHub Passport Strategy
 required(update(config, 'GITHUB_CLIENT_ID'));
 required(update(config, 'GITHUB_CLIENT_SECRET'));
-required(update(config, 'GITHUB_OAUTH_CALLBACK'));
 
 // User Strategy
 config.strategy = {};

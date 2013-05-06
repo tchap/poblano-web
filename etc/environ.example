@@ -1,0 +1,26 @@
+#------------------------------------------------------------------------------
+# Global
+#------------------------------------------------------------------------------
+
+POBLANO_REPO='-abs-path-'
+
+#------------------------------------------------------------------------------
+# Supervisord
+#------------------------------------------------------------------------------
+
+POBLANO_SUPERVISOR_CONFIG="$POBLANO_REPO/etc/supervisord.conf"
+POBLANO_SUPERVISOR_HOME="-abs-path-"
+
+#------------------------------------------------------------------------------
+# Poblano
+#------------------------------------------------------------------------------
+
+export POBLANO_HTTP_PORT='8080'
+export POBLANO_HTTP_FORWARDED_HOST=''
+export POBLANO_HTTP_PATH_PREFIX=''
+export POBLANO_HTTP_PROXY_ENABLED='yes'
+
+export POBLANO_SESSION_SECRET='-random-string-'
+
+export POBLANO_GITHUB_CLIENT_ID='-github-client-id-'
+export POBLANO_GITHUB_CLIENT_SECRET='-github-client-secret-'
