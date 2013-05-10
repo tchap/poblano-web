@@ -2,11 +2,15 @@
  * A very simple in-memory User implementation.
  */
 
+var Backend = function () {
+  this.user = new User();
+}
+
 var User = function () {
   this._users = {};
 }
 
-User.prototype.findOrCreate = function (args, callback) {
+User.prototype.find = function (args, callback) {
   var keys = ['id', 'profile'];
   for (i in keys) {
     if (!args[keys[i]])
@@ -28,4 +32,4 @@ User.prototype.findById = function (id, callback) {
     callback(new Error("User not found"), null);
 }
 
-module.exports = User;
+module.exports = Backend;

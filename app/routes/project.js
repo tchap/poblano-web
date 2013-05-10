@@ -5,5 +5,5 @@ exports.initialise = function (req, res) {
     prefix: req.app.get('prefix'),
     user: req.user
   };
-  res.render('initialise', context);
+  res.render('project/initialise', context);
 };

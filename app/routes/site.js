@@ -1,19 +1,31 @@
 exports.login = function (req, res) {
   var context = {
     title: 'Welcome!',
-    prefix: req.app.get('prefix')
+    prefix: req.app.get('prefix'),
+    user: req.user
   };
-  res.render('login', context);
+  res.render('site/login', context);
 };
 
-exports.index = function (req, res) {
+exports.dashboard = function (req, res) {
+  req.user.roles = {};
   req.user.displayName = req.user.displayName || req.user.username;
   var context = {
     title: 'Dashboard',
     prefix: req.app.get('prefix'),
     user: req.user
   };
-  res.render('index', context)
+  res.render('site/dashboard', context)
 }
 
-exports.admin = exports.index;
+exports.admin = function (req, res) {
+  req.user.roles = req.user.roles || {};
+  var context = {
+    title: 'Admin',
+    prefix: req.app.get('prefix'),
+    user: req.user
+  };
+  res.render('site/admin', context);
+};
+
+module.exports = exports;

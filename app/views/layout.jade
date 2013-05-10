@@ -10,7 +10,16 @@ html
       div.navbar-inner
         div.container
          a(href='#{prefix}/', class='brand') Poblano
-         block menu
+         if user
+           ul.nav
+            li
+              a(href='#{prefix}/project/initialise') Initialise a Project
+            if 'admin' in user.roles
+              li
+                a(href='#{prefix}/admin') Administer
+           div.pull-right
+             span.btn.btn-link
+               a(href='#{prefix}/user/#{user.id}')= user.displayName
     div#content.container
       block content
     script(src='#{prefix}/js/jquery-2.0.0.min.js')

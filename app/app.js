@@ -28,17 +28,28 @@ app.configure(function () {
 });
 
 /**
+ * Backend Setup - User Strategy
+ */
+var backends = require('./lib/Backends')
+  , backend;
+if (config.MONGODB_ENABLED) {
+  backend = new backends.MongoDBBackend(config);
+}
+else {
+  backend = new backends.SimpleBackend(config);
+}
+
+/**
  * Passport Setup - GitHub Strategy
  */
-var GitHubStrategy = require('passport-github').Strategy
-  , User = new config.strategy['User'](config);
+var GitHubStrategy = require('passport-github').Strategy;
 
 passport.serializeUser(function(user, done) {
-  done(null, user.id);
+  done(null, user._id);
 });
 
 passport.deserializeUser(function(id, done) {
-  User.findById(id, function(err, user) {
+  backend.users.findById(id, function(err, user) {
     done(err, user);
   });
 });
@@ -54,9 +65,10 @@ passport.use(new GitHubStrategy({
     }
   },
   function(accessToken, refreshToken, profile, done) {
-    User.findOrCreate({ id: profile.id, profile: profile }, function(err, user) {
-      done(err, user);
-    });
+    backend.users.createFromServiceId({githubId: profile.id, githubProfile: profile},
+      function(err, user) {
+        done(err, user);
+      });
   }
 ));
 
@@ -70,10 +82,12 @@ app.configure('development', function () {
 var site = require('./routes/site')
   , user = require('./routes/user')
   , project = require('./routes/project')
+  , error = require('./routes/error');
 
 // General 
 app.get('/login', site.login);
-app.get('/', ensureAuthenticated, site.index);
+
+app.get('/', ensureAuthenticated, site.dashboard);
 app.get('/admin', ensureAuthenticated, restrictTo('admin'), site.admin);
 
 // User
@@ -87,6 +101,10 @@ app.get('/auth/github', passport.authenticate('github'));
 app.get('/auth/github/callback',
   passport.authenticate('github', { successRedirect: '/',
                                     failureRedirect: '/login'}));
+
+// Errors
+app.get('/error/account-not-found', error.accountNotFound);
+app.get('/error/access-denied', error.accessDenied);
 
 /**
  * Listen and Serve
@@ -106,7 +124,17 @@ function ensureAuthenticated(req, res, next) {
 }
 
 function restrictTo(role) {
+  if (role === 'self')
+    return function (req, res, next) {
+      if (req.user.id === parseInt(req.params.id))
+        next();
+      else
+        res.redirect(301, '/error/access-denied');
+    }
   return function(req, res, next) {
-    next();
+    if (role in req.user.roles)
+      next();
+    else
+      res.redirect(301, '/error/access-denied');
   }
 }

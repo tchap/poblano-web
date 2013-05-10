@@ -2,9 +2,13 @@
  * Global Poblano Configuration
  */
 
-var ENVIRON_PREFIX = 'POBLANO_'
+var ENV_PREFIX = 'POBLANO_'
 
 var config = {};
+
+/**
+ * Frontend
+ */
 
 // Listen
 update(config, 'HTTP_HOST', 'http://localhost');
@@ -20,9 +24,16 @@ required(update(config, 'SESSION_SECRET'));
 required(update(config, 'GITHUB_CLIENT_ID'));
 required(update(config, 'GITHUB_CLIENT_SECRET'));
 
+/**
+ * Backend
+ */
+
 // User Strategy
-config.strategy = {};
-config.strategy['User'] = require('./lib/User').SimpleUser;
+update(config, 'MONGODB_ENABLED', false);
+if (config.MONGODB_ENABLED) {
+	required(update(config, 'MONGODB_HOST'));
+	required(update(config, 'MONGODB_PORT'));
+}
 
 /**
  * Export
@@ -42,7 +53,7 @@ function update() {
 	  , defaultValue = arguments[2]
 
 	obj[key] = obj[key]
-		|| process.env[ENVIRON_PREFIX + key]
+		|| process.env[ENV_PREFIX + key]
 		|| defaultValue;
 
 	return obj[key]

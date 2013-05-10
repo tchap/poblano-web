@@ -3,7 +3,7 @@
  */
 
 // A simple in-memory implementation.
-module.exports.SimpleUser = require('./SimpleUser');
+module.exports.SimpleBackend = require('./SimpleBackend');
 
 // Persistent MongoDB-based implementation.
-module.exports.MongoUser = require('./MongoUser');
+module.exports.MongoDBBackend = require('./MongoDBBackend');
