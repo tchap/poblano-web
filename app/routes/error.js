@@ -10,6 +10,9 @@ exports.accountNotFound = function (req, res) {
 exports.accessDenied = error('Access Denied',
   'Your rights are insufficint for accessing this page.')
 
+exports.internalServerError = error('Internal Server Error',
+  'Something went terribly wrong.')
+
 module.exports = exports;
 
 /**

@@ -1,89 +1,112 @@
 /**
- * A User implementation backed by MongoDB.
+ * A Backend implementation backed by MongoDB.
  */
-var format = require('util').format;
-  , Db = require('mongodb').Db;
+var util = require('util')
+  , Db = require('mongodb').Db
+  , Server = require('mongodb').Server
+  , ObjectID = require('mongodb').ObjectID;
 
-var Backend = function (config) {
-  this._db = new Db('poblanoweb',
-                    new Server(config.MONGODB_HOST, config.MONGODB_PORT, {}),
-                    {w:1});
-  this.users = new Users(this._db);
+var Backend = function(config) {
+  var self = this;
+
+  this.db = new Db('poblanoweb',
+                   new Server(config.MONGODB_HOST, config.MONGODB_PORT,
+                              {auto_reconnect: true}),
+                   {w:1});
+  this.db.open(function(err, client) {
+    self.users = new Users(client);
+    console.log('Connected to MongoDB successfully.');
+  });
 }
 
-var Users = function (db) {
+/**
+ * Classes
+ */
+
+// Base collection class
+function Collection(name, db) {
+  this._collectionName = name;
   this._db = db;
 };
 
-Users.prototype.createFromServiceId = function (service, args, cb) {
-  var self = this
-    , profileIdKey = service + 'Id'
-    , id = args[profileIdKey];
+Collection.prototype.create = function(doc, cb) {
+  var self = this;
 
-  if (id)
-    self._users(function (err, users) {
-      if (err)
-        cb(err, null);
-      else
-        var user = users.findOne({'accounts.' + service + '.id'});
-        if (user) {
-          cb(null, user);
+  self._collection(function(err, coll) {
+    if (err) cb(err, null);
+    else coll.insert(doc, function(err, docs) {
+      if (err) cb(err, null);
+      else cb(null, docs[0]);
+    });
+  });
+};
+
+Collection.prototype.find = function(selector, cb) {
+  var self = this;
+
+  self._collection(function (err, coll) {
+    if (err) cb(err, null);
+    else coll.find(selector).toArray(cb);
+  });
+}
+
+Collection.prototype.findOne = function(selector, cb) {
+  var self = this;
+
+  self._collection(function (err, coll) {
+    if (err) cb(err, null);
+    else coll.findOne(selector, cb);
+  });
+}
+
+Collection.prototype.findOrCreateOne = function(selector, doc, cb) {
+  var self = this;
+
+  self._collection(function (err, coll) {
+    if (err) cb(err, null);
+    else {
+      coll.findOne(selector, function(err, doc) {
+        if (err) {
+          cb(err, null);
           return;
         }
-        users.insert({'accounts': {service: {'id': id}}}, function(err, docs) {
-          if (err)
-            cb(err, null);
-          else
-            cb(null, docs);
+        if (doc) {
+          cb(null, doc);
+          return;
+        }
+        coll.insert(doc, function(err, docs) {
+          if (err) cb(err, null);
+          else cb(null, docs[0]);
         });
-    });
-  else
-    cb(new Error(profileKey + ' key is missing in the arguments.'), null);
-}
-
-Users.prototype.findById = function (id, cb) {
-  this._users(function(err, users) {
-    if (err)
-      cb(err, null);
-    else
-      cb(null, users.findOne({'_id': id}));
-  });
-}
-
-Users.prototype.findByServiceId = function (service, args, cb) {
-  var self = this,
-    , idKey = service + 'Id',
-    , id = args[idKey];
-
-  if (id)
-    self._users(function(err, users) {
-      if (err)
-        cb(err, null);
-      else
-        cb(null, users.findOne({'accounts.' + service + '.id': id}));
-    });
-  else
-    callback(new Error(idKey + ' key missing in the arguments.'), null);
-}
-
-Users.prototype.findAll = function (cb) {
-  this._users(function(err, users) {
-    cb(err, users);
-  });
-}
-
-Users.prototype._users = function(cb) {
-  this._db.open(function(err, client) {
-    if (err)
-      cb(err, null);
-    else
-      client.collection('users', function(err, users) {
-        if (err)
-          cb(err, null);
-        else
-          cb(null, users);
       });
+    }
   });
 }
 
+Collection.prototype._collection = function(cb) {
+  this._db.collection(this._collectionName, cb);
+}
+
+// Users Collection
+function Users(db) {
+  this._db = db;
+  this._collectionName = 'users';
+}
+
+util.inherits(Users, Collection);
+
+Users.prototype.findOneById = function (id, cb) {
+  this.findOne({'_id': new ObjectID(id)}, cb);
+}
+
+Users.prototype.findOneByServiceId = function (service, id, cb) {
+  var selector = {};
+
+  selector['accounts.' + service + '.id'] = id;
+  this.findOne(selector, cb);
+}
+
+/**
+ * Exports
+ */
 module.exports = Backend;

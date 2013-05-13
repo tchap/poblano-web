@@ -1,18 +1,27 @@
+/**
+ * Backend Setup - User Strategy
+ */
+var Backend = require('./lib/Backend').Backend
+  , Config  = require('./config')
+  , backend = new Backend(Config);
+
+/**
+ * Express Setup
+ */
 var express  = require('express')
   , http     = require('http')
   , path     = require('path')
   , passport = require('passport')
-  , config   = require('./config')
 
 var app = express();
 
 app.configure(function () {
-  app.set('host', config.HTTP_HOST);
-  app.set('port', config.HTTP_PORT);
+  app.set('host', Config.HTTP_HOST);
+  app.set('port', Config.HTTP_PORT);
   app.set('views', __dirname + '/views');
   app.set('view engine', 'jade');
-  app.set('prefix', config.HTTP_PATH_PREFIX)
-  if (config.HTTP_PROXY_ENABLED) {
+  app.set('prefix', Config.HTTP_PATH_PREFIX)
+  if (Config.HTTP_PROXY_ENABLED) {
     app.enable('trust proxy');
   }
   app.use(express.favicon());
@@ -20,24 +29,16 @@ app.configure(function () {
   app.use(express.cookieParser());
   app.use(express.bodyParser());
   app.use(express.methodOverride());
-  app.use(express.session({ secret: config.SESSION_SECRET }));
+  app.use(express.session({ secret: Config.SESSION_SECRET }));
   app.use(passport.initialize());
   app.use(passport.session());
+  app.use(function(req, res, next) {
+    req._backend = backend;
+    next();
+  });
   app.use(app.router);
   app.use(express.static(path.join(__dirname, 'public')));
 });
-
-/**
- * Backend Setup - User Strategy
- */
-var backends = require('./lib/Backends')
-  , backend;
-if (config.MONGODB_ENABLED) {
-  backend = new backends.MongoDBBackend(config);
-}
-else {
-  backend = new backends.SimpleBackend(config);
-}
 
 /**
  * Passport Setup - GitHub Strategy
@@ -49,26 +50,21 @@ passport.serializeUser(function(user, done) {
 });
 
 passport.deserializeUser(function(id, done) {
-  backend.users.findById(id, function(err, user) {
-    done(err, user);
-  });
+  backend.users.findOneById(id, done);
 });
 
 passport.use(new GitHubStrategy({
-    clientID:      config.GITHUB_CLIENT_ID,
-    clientSecret:  config.GITHUB_CLIENT_SECRET,
-    callbackURL:   config.HTTP_FORWARDED_HOST
-		 + config.HTTP_PATH_PREFIX
+    clientID:      Config.GITHUB_CLIENT_ID,
+    clientSecret:  Config.GITHUB_CLIENT_SECRET,
+    callbackURL:   Config.HTTP_FORWARDED_HOST
+		 + Config.HTTP_PATH_PREFIX
 		 + '/auth/github/callback',
     customHeaders: {
       'User-Agent': 'Salsita Poblano'
     }
   },
   function(accessToken, refreshToken, profile, done) {
-    backend.users.createFromServiceId({githubId: profile.id, githubProfile: profile},
-      function(err, user) {
-        done(err, user);
-      });
+    backend.users.findOneByServiceId('github', profile.id, done);
   }
 ));
 
@@ -80,6 +76,7 @@ app.configure('development', function () {
  * Paths
  */
 var site = require('./routes/site')
+  , admin = require('./routes/admin')
   , user = require('./routes/user')
   , project = require('./routes/project')
   , error = require('./routes/error');
@@ -87,24 +84,35 @@ var site = require('./routes/site')
 // General 
 app.get('/login', site.login);
 
-app.get('/', ensureAuthenticated, site.dashboard);
-app.get('/admin', ensureAuthenticated, restrictTo('admin'), site.admin);
+app.get('/', restrictTo('authenticated'),
+             site.dashboard);
+
+// Admin
+app.get('/admin', restrictTo('authenticated'),
+                  restrictTo('admin'),
+                  admin.index);
+app.post('/admin/invite-user', restrictTo('authenticated'),
+                               restrictTo('admin'),
+                               admin.invite);
 
 // User
-app.get('/user/:id', ensureAuthenticated, restrictTo('self'), user.profile);
-
+app.get('/user/:id', restrictTo('authenticated'),
+                     restrictTo(['self', 'admin']),
+                     user.profile);
 // Project
-app.get('/project/initialise', ensureAuthenticated, project.initialise);
+app.get('/project/initialise', restrictTo('authenticated'),
+                               project.initialise);
 
 // Authentication
 app.get('/auth/github', passport.authenticate('github'));
 app.get('/auth/github/callback',
   passport.authenticate('github', { successRedirect: '/',
-                                    failureRedirect: '/login'}));
+                                    failureRedirect: '/error/account-not-found'}));
 
 // Errors
 app.get('/error/account-not-found', error.accountNotFound);
 app.get('/error/access-denied', error.accessDenied);
+app.get('/error/internal-server-error', error.internalServerError);
 
 /**
  * Listen and Serve
@@ -116,25 +124,28 @@ http.createServer(app).listen(app.get('port'), function () {
 /**
  * Middleware
  */
-function ensureAuthenticated(req, res, next) {
-  if (req.isAuthenticated())
-    return next();
-  else
-    res.redirect('/login');
-}
-
-function restrictTo(role) {
-  if (role === 'self')
+function restrictTo(roles) {
+  // 'authenticated' is a special case that always stays alone.
+  if (roles === 'authenticated')
     return function (req, res, next) {
-      if (req.user.id === parseInt(req.params.id))
-        next();
-      else
-        res.redirect(301, '/error/access-denied');
+       if (req.isAuthenticated()) return next();
+       else res.redirect('/login');
     }
+
+  // The other roles can be ORed.
+  if (!Array.isArray(roles)) roles = [roles];
   return function(req, res, next) {
-    if (role in req.user.roles)
-      next();
-    else
-      res.redirect(301, '/error/access-denied');
+    var assigned = function(role) {
+      if (role === 'self') return (req.user._id.toString() === req.params.id);
+      else return (role in req.user.roles);
+    };
+
+    for (i in roles) {
+      if (assigned(roles[i])) {
+        next();
+        return;
+      }
+    }
+    res.redirect(301, '/error/access-denied')
   }
 }

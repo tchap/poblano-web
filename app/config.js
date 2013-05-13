@@ -35,6 +35,13 @@ if (config.MONGODB_ENABLED) {
 	required(update(config, 'MONGODB_PORT'));
 }
 
+// Invitations
+required(update(config, 'SMTP_HOST'));
+required(update(config, 'SMTP_USERNAME'));
+required(update(config, 'SMTP_FROM', config.SMTP_USERNAME));
+required(update(config, 'SMTP_PASSWORD'));
+required(update(config, 'SMTP_SSL', true));
+
 /**
  * Export
  */

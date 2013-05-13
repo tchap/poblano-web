@@ -8,8 +8,8 @@ exports.login = function (req, res) {
 };
 
 exports.dashboard = function (req, res) {
-  req.user.roles = {};
-  req.user.displayName = req.user.displayName || req.user.username;
+  fillMinimalUser(req.user);
+
   var context = {
     title: 'Dashboard',
     prefix: req.app.get('prefix'),
@@ -18,14 +18,13 @@ exports.dashboard = function (req, res) {
   res.render('site/dashboard', context)
 }
 
-exports.admin = function (req, res) {
-  req.user.roles = req.user.roles || {};
-  var context = {
-    title: 'Admin',
-    prefix: req.app.get('prefix'),
-    user: req.user
-  };
-  res.render('site/admin', context);
-};
-
 module.exports = exports;
+
+/**
+ * Helpers
+ */
+
+function fillMinimalUser(user) {
+  user.name  = user.name  || "";
+  user.roles = user.roles || {};
+}

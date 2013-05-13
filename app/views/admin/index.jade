@@ -1,0 +1,43 @@
+extend ../layout
+block content
+  h1 Administration
+  hr
+  h2 Users
+  table
+    tr
+      td
+        b Name
+      td
+        b Admin
+      td
+        b Status
+    for usr in users
+      tr
+        td= usr.name
+        td
+          if 'admin' in usr.roles
+            | YES
+          else
+            | NO
+        td= usr.status
+  h4 Add Another User
+  form(method="post", action="#{prefix}/admin/invite-user")
+    table
+      tr
+        td
+          label Name:
+        td
+          input(type="text", name="user[name]")
+      tr
+        td
+          label Email address:
+        td
+          input(type="email", name="user[email]")
+      tr
+        td Admin rights:
+        td
+          input(type="checkbox", name="user[admin]", value="true")
+      tr
+        td
+        td
+          input(type="submit", value="Invite")
