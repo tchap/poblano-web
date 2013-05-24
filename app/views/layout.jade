@@ -20,6 +20,8 @@ html
            div.pull-right
              span.btn.btn-link
                a(href='#{prefix}/user/#{user._id}')= user.name
+             span.btn.btn-link
+               a(href='#{prefix}/logout') Logout
     div#content.container
       block content
     script(src='#{prefix}/js/jquery-2.0.0.min.js')

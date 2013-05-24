@@ -1,10 +1,18 @@
+var querystring = require('querystring');
+
 exports.login = function (req, res) {
   var context = {
     title: 'Welcome!',
     prefix: req.app.get('prefix'),
-    user: req.user
+    user: req.user,
+    returnTo: querystring.escape(req.query['returnTo']),
   };
   res.render('site/login', context);
+};
+
+exports.logout = function(req, res) {
+  req.logout();
+  res.redirect('/');
 };
 
 exports.dashboard = function (req, res) {
@@ -16,7 +24,7 @@ exports.dashboard = function (req, res) {
     user: req.user
   };
   res.render('site/dashboard', context)
-}
+};
 
 module.exports = exports;
 

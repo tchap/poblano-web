@@ -1,3 +1,11 @@
 extend ../layout
 block content
   h1= user.name
+  hr
+  h2 Authentication
+  p Choose the external service you want to link you account with:
+  table
+    tr
+      td(style='padding: 20px')
+        a(href='#{prefix}/auth/github?returnTo=#{url}')
+          | <img src="#{prefix}/img/github-logo.png" alt="GitHub OAuth">

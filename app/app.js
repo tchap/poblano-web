@@ -57,13 +57,20 @@ passport.use(new GitHubStrategy({
     clientID:      Config.GITHUB_CLIENT_ID,
     clientSecret:  Config.GITHUB_CLIENT_SECRET,
     callbackURL:   Config.HTTP_FORWARDED_HOST
-		 + Config.HTTP_PATH_PREFIX
-		 + '/auth/github/callback',
+                 + Config.HTTP_PATH_PREFIX
+                 + '/auth/github/callback',
     customHeaders: {
       'User-Agent': 'Salsita Poblano'
-    }
+    },
+    passReqToCallback: true,
   },
-  function(accessToken, refreshToken, profile, done) {
+  // XXX: Use state to prevent CSRF
+  function(req, accessToken, refreshToken, profile, done) {
+    var state = req.query['state'];
+    // XXX: Call done?
+    if (!state) throw new Error('GitHub OAuth is missing the state paremeter.');
+
+//    if (state in global.stateCallbacks) global.stateCallbacks[state](profile);
     backend.users.findOneByServiceId('github', profile.id, done);
   }
 ));
@@ -75,6 +82,8 @@ app.configure('development', function () {
 /**
  * Paths
  */
+var mw = require('./lib/middleware.js');
+
 var site = require('./routes/site')
   , admin = require('./routes/admin')
   , user = require('./routes/user')
@@ -83,30 +92,45 @@ var site = require('./routes/site')
 
 // General 
 app.get('/login', site.login);
+app.get('/logout', site.logout);
 
-app.get('/', restrictTo('authenticated'),
+app.get('/', mw.restrictTo('authenticated'),
+             mw.ensureAccountComplete,
              site.dashboard);
 
+// Project
+app.get('/project/initialise', mw.restrictTo('authenticated'),
+                               mw.ensureAccountComplete,
+                               project.initialise);
+
 // Admin
-app.get('/admin', restrictTo('authenticated'),
-                  restrictTo('admin'),
+app.get('/admin', mw.restrictTo('authenticated'),
+                  mw.ensureAccountComplete,
+                  mw.restrictTo('admin'),
                   admin.index);
-app.post('/admin/invite-user', restrictTo('authenticated'),
-                               restrictTo('admin'),
+app.post('/admin/invite-user', mw.restrictTo('authenticated'),
+                               mw.ensureAccountComplete,
+                               mw.restrictTo('admin'),
                                admin.invite);
 
 // User
-app.get('/user/:id', restrictTo('authenticated'),
-                     restrictTo(['self', 'admin']),
+app.get('/user/:id', mw.restrictTo('authenticated'),
+                     mw.ensureAccountComplete,
+                     mw.restrictTo(['self', 'admin']),
                      user.profile);
-// Project
-app.get('/project/initialise', restrictTo('authenticated'),
-                               project.initialise);
+app.get('/user/:id/auth/connect/github', function(req, res, next) {
+  console.log(req);
+  next();
+});
+
+// Invitations
+app.get('/invitation/:id', user.invitation);
 
 // Authentication
-app.get('/auth/github', passport.authenticate('github'));
+// XXX: Use connect-ensure-login
+app.get('/auth/github', mw.checkReturnTo, passport.authenticate('github', {state: 'Bublifuk'}));
 app.get('/auth/github/callback',
-  passport.authenticate('github', { successRedirect: '/',
+  passport.authenticate('github', { successReturnToOrRedirect: '/',
                                     failureRedirect: '/error/account-not-found'}));
 
 // Errors
@@ -120,32 +144,3 @@ app.get('/error/internal-server-error', error.internalServerError);
 http.createServer(app).listen(app.get('port'), function () {
   console.log("Express server listening on port " + app.get('port'));
 });
-
-/**
- * Middleware
- */
-function restrictTo(roles) {
-  // 'authenticated' is a special case that always stays alone.
-  if (roles === 'authenticated')
-    return function (req, res, next) {
-       if (req.isAuthenticated()) return next();
-       else res.redirect('/login');
-    }
-
-  // The other roles can be ORed.
-  if (!Array.isArray(roles)) roles = [roles];
-  return function(req, res, next) {
-    var assigned = function(role) {
-      if (role === 'self') return (req.user._id.toString() === req.params.id);
-      else return (role in req.user.roles);
-    };
-
-    for (i in roles) {
-      if (assigned(roles[i])) {
-        next();
-        return;
-      }
-    }
-    res.redirect(301, '/error/access-denied')
-  }
-}

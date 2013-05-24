@@ -95,14 +95,21 @@ function Users(db) {
 
 util.inherits(Users, Collection);
 
-Users.prototype.findOneById = function (id, cb) {
+Users.prototype.findOneById = function(id, cb) {
   this.findOne({'_id': new ObjectID(id)}, cb);
 }
 
-Users.prototype.findOneByServiceId = function (service, id, cb) {
+Users.prototype.findOneByServiceId = function(service, id, cb) {
   var selector = {};
 
   selector['accounts.' + service + '.id'] = id;
+  this.findOne(selector, cb);
+}
+
+Users.prototype.findOneByInvitationId = function(id, cb) {
+  var selector = {
+    invitationId: id,
+  };
   this.findOne(selector, cb);
 }
 
